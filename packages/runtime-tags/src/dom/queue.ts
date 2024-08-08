@@ -104,6 +104,14 @@ function runBatch() {
     const scope = currentBatch[i + BatchOffset.Scope] as Scope;
     const signal = currentBatch[i + BatchOffset.Signal] as ValueSignal;
     const value = currentBatch[i + BatchOffset.Value] as unknown;
-    signal(scope, value);
+    try {
+      signal(scope, value);
+    } catch (e) {
+      if (scope.___throw) {
+        scope.___throw(e);
+      } else {
+        throw e;
+      }
+    }
   }
 }

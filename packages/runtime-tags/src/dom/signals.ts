@@ -161,14 +161,22 @@ export function closure<T>(
         op = DIRTY;
       }
       if (--scope[markAccessor] === 0) {
-        if (op === DIRTY || scope[dirtyAccessor]) {
-          scope[dirtyAccessor] = false;
-          ownerScope ??= getOwnerScope(scope);
-          ownerValueAccessor ??= getOwnerValueAccessor(scope);
-          fn?.(scope, ownerScope[ownerValueAccessor]);
-          intersection?.(scope, DIRTY);
-        } else {
-          intersection?.(scope, CLEAN);
+        try {
+          if (op === DIRTY || scope[dirtyAccessor]) {
+            scope[dirtyAccessor] = false;
+            ownerScope ??= getOwnerScope(scope);
+            ownerValueAccessor ??= getOwnerValueAccessor(scope);
+            fn?.(scope, ownerScope[ownerValueAccessor]);
+            intersection?.(scope, DIRTY);
+          } else {
+            intersection?.(scope, CLEAN);
+          }
+        } catch (e) {
+          if (scope.___throw) {
+            scope.___throw(e);
+          } else {
+            throw e;
+          }
         }
       } else {
         scope[dirtyAccessor] ||= op === DIRTY;
