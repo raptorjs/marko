@@ -1,4 +1,4 @@
-// size: 18438 (min) 6702 (brotli)
+// size: 17408 (min) 6382 (brotli)
 var empty = [],
   rest = Symbol();
 function attrTag(attrs2) {
@@ -48,507 +48,6 @@ function flushAndWaitFrame() {
 function triggerMacroTask() {
   port2.postMessage(0);
 }
-function createScope($global) {
-  return { y: 1, $global: $global };
-}
-var emptyScope = createScope({});
-function getEmptyScope(marker) {
-  return (emptyScope.a = emptyScope.b = marker), emptyScope;
-}
-function destroyScope(scope) {
-  _destroyScope(scope), scope.e?.k?.delete(scope);
-  let closureSignals = scope.z?.c;
-  if (closureSignals) for (let signal of closureSignals) signal.l?.(scope);
-  return scope;
-}
-function _destroyScope(scope) {
-  scope.k?.forEach(_destroyScope);
-  let controllers = scope.n;
-  if (controllers) for (let ctrl of controllers.values()) ctrl.abort();
-}
-function onDestroy(scope) {
-  let parentScope = scope.e;
-  for (; parentScope && !parentScope.k?.has(scope); )
-    (parentScope.k ||= new Set()).add(scope),
-      (parentScope = (scope = parentScope).e);
-}
-function removeAndDestroyScope(scope) {
-  destroyScope(scope);
-  let current = scope.a,
-    stop = scope.b.nextSibling;
-  for (; current !== stop; ) {
-    let next = current.nextSibling;
-    current.remove(), (current = next);
-  }
-}
-function insertBefore(scope, parent, nextSibling) {
-  let current = scope.a,
-    stop = scope.b.nextSibling;
-  for (; current !== stop; ) {
-    let next = current.nextSibling;
-    parent.insertBefore(current, nextSibling), (current = next);
-  }
-}
-var registeredValues = {},
-  Render = class {
-    o = [];
-    p = {};
-    A = { _: registeredValues };
-    constructor(renders, runtimeId, renderId) {
-      (this.B = renders),
-        (this.C = runtimeId),
-        (this.q = renderId),
-        (this.s = renders[renderId]),
-        this.t();
-    }
-    w() {
-      this.s.w(), this.t();
-    }
-    t() {
-      let data2 = this.s,
-        serializeContext = this.A,
-        scopeLookup = this.p,
-        visits = data2.v,
-        cleanupOwners = new Map();
-      if (visits.length) {
-        let commentPrefixLen = data2.i.length,
-          cleanupMarkers = new Map();
-        data2.v = [];
-        let sectionEnd = (visit, scopeId = this.h, curNode = visit) => {
-          let scope = (scopeLookup[scopeId] ||= {}),
-            endNode = curNode;
-          for (; 8 === (endNode = endNode.previousSibling).nodeType; );
-          scope.b = endNode;
-          let startNode = (scope.a ||= endNode),
-            len = cleanupMarkers.size;
-          for (let [markerScopeId, markerNode] of cleanupMarkers) {
-            if (!len--) break;
-            markerScopeId !== scopeId &&
-              4 & startNode.compareDocumentPosition(markerNode) &&
-              2 & curNode.compareDocumentPosition(markerNode) &&
-              (cleanupOwners.set("" + markerScopeId, scopeId),
-              cleanupMarkers.delete(markerScopeId));
-          }
-          return cleanupMarkers.set(scopeId, visit), scope;
-        };
-        for (let visit of visits) {
-          let commentText = visit.data,
-            token = commentText[commentPrefixLen],
-            scopeId = parseInt(commentText.slice(commentPrefixLen + 1)),
-            scope = (scopeLookup[scopeId] ||= {}),
-            dataIndex = commentText.indexOf(" ") + 1,
-            data3 = dataIndex ? commentText.slice(dataIndex) : "";
-          if ("*" === token) scope[data3] = visit.previousSibling;
-          else if ("$" === token) cleanupMarkers.set(scopeId, visit);
-          else if ("[" === token)
-            this.h && (data3 && sectionEnd(visit), this.o.push(this.h)),
-              (this.h = scopeId),
-              (scope.a = visit);
-          else if ("]" === token) {
-            if (((scope[data3] = visit), scopeId < this.h)) {
-              let currParent = visit.parentNode,
-                startNode = sectionEnd(visit).a;
-              currParent &&
-                currParent !== startNode.parentNode &&
-                currParent.prepend(startNode),
-                (this.h = this.o.pop());
-            }
-          } else if ("|" === token) {
-            scope[parseInt(data3)] = visit;
-            let childScopeIds = JSON.parse(
-                "[" + data3.slice(data3.indexOf(" ") + 1) + "]",
-              ),
-              curNode = visit;
-            for (let i = childScopeIds.length - 1; i >= 0; i--)
-              curNode = sectionEnd(visit, childScopeIds[i], curNode).b;
-          }
-        }
-      }
-      let resumes = data2.r;
-      if (resumes) {
-        data2.r = [];
-        let len = resumes.length,
-          i = 0;
-        try {
-          for (isResuming = !0; i < len; ) {
-            let resumeData = resumes[i++];
-            if ("function" == typeof resumeData) {
-              let scopes = resumeData(serializeContext),
-                { $global: $global } = scopeLookup;
-              $global ||
-                ((scopeLookup.$global = $global = scopes.$ || {}),
-                ($global.runtimeId = this.C),
-                ($global.renderId = this.q));
-              for (let scopeId in scopes)
-                if ("$" !== scopeId) {
-                  let scope = scopes[scopeId],
-                    prevScope = scopeLookup[scopeId];
-                  (scope.$global = $global),
-                    prevScope !== scope &&
-                      (scopeLookup[scopeId] = Object.assign(scope, prevScope));
-                  let cleanupOwnerId = cleanupOwners.get(scopeId);
-                  cleanupOwnerId &&
-                    ((scope.e = scopes[cleanupOwnerId]), onDestroy(scope));
-                }
-            } else
-              i === len || "string" != typeof resumes[i]
-                ? delete this.B[this.q]
-                : registeredValues[resumes[i++]](
-                    scopeLookup[resumeData],
-                    scopeLookup[resumeData],
-                  );
-          }
-        } finally {
-          isResuming = !1;
-        }
-      }
-    }
-  },
-  isResuming = !1;
-function register(id, obj) {
-  return (registeredValues[id] = obj), obj;
-}
-function registerBoundSignal(id, signal) {
-  return (
-    (registeredValues[id] = (scope) => (valueOrOp) => signal(scope, valueOrOp)),
-    signal
-  );
-}
-function init(runtimeId = "M") {
-  let renders,
-    resumeRender = (renderId) =>
-      (resumeRender[renderId] = renders[renderId] =
-        new Render(renders, runtimeId, renderId));
-  function setRenders(v) {
-    renders = v;
-    for (let renderId in v) resumeRender(renderId);
-    Object.defineProperty(window, runtimeId, {
-      configurable: !0,
-      value: resumeRender,
-    });
-  }
-  window[runtimeId]
-    ? setRenders(window[runtimeId])
-    : Object.defineProperty(window, runtimeId, {
-        configurable: !0,
-        set: setRenders,
-      });
-}
-function registerSubscriber(id, signal) {
-  return register(id, signal.j), signal;
-}
-function nodeRef(id, key) {
-  return register(id, (scope) => () => scope[key]);
-}
-var MARK = {},
-  CLEAN = {},
-  DIRTY = {};
-function state(valueAccessor, fn, getIntersection) {
-  let valueSignal = value(valueAccessor, fn, getIntersection),
-    markAccessor = valueAccessor + "#",
-    valueChangeAccessor = valueAccessor + "@";
-  return (scope, valueOrOp, valueChange) => (
-    rendering
-      ? valueSignal(
-          scope,
-          valueOrOp === MARK ||
-            valueOrOp === CLEAN ||
-            valueOrOp === DIRTY ||
-            (scope[valueChangeAccessor] = valueChange) ||
-            void 0 === scope[markAccessor]
-            ? valueOrOp
-            : CLEAN,
-        )
-      : scope[valueChangeAccessor]
-        ? scope[valueChangeAccessor](valueOrOp)
-        : (function (scope, signal, value2) {
-            isScheduled ||
-              ((isScheduled = !0), queueMicrotask(flushAndWaitFrame)),
-              (rendering = !0),
-              signal(scope, MARK),
-              (rendering = !1);
-            let nextSignal = { f: scope, D: signal, E: value2, d: void 0 };
-            if (pendingSignal)
-              if (sortScopeByDOMPosition(pendingSignal.f, nextSignal.f) < 0)
-                (nextSignal.d = pendingSignal), (pendingSignal = nextSignal);
-              else {
-                let currentSignal = pendingSignal;
-                for (
-                  ;
-                  currentSignal.d &&
-                  sortScopeByDOMPosition(currentSignal.d.f, nextSignal.f) <= 0;
-
-                )
-                  currentSignal = currentSignal.d;
-                (nextSignal.d = currentSignal.d),
-                  (currentSignal.d = nextSignal);
-              }
-            else pendingSignal = nextSignal;
-          })(scope, valueSignal, valueOrOp),
-    valueOrOp
-  );
-}
-function value(valueAccessor, fn, getIntersection) {
-  let markAccessor = valueAccessor + "#",
-    intersection2 =
-      getIntersection &&
-      ((scope, op) => (intersection2 = getIntersection())(scope, op));
-  return (scope, valueOrOp) => {
-    if (valueOrOp === MARK)
-      1 === (scope[markAccessor] = (scope[markAccessor] ?? 0) + 1) &&
-        intersection2?.(scope, MARK);
-    else if (valueOrOp !== DIRTY) {
-      let existing = void 0 !== scope[markAccessor];
-      1 === (scope[markAccessor] ||= 1) &&
-        (valueOrOp === CLEAN || (existing && scope[valueAccessor] === valueOrOp)
-          ? intersection2?.(scope, CLEAN)
-          : ((scope[valueAccessor] = valueOrOp),
-            fn && fn(scope, valueOrOp),
-            intersection2?.(scope, DIRTY))),
-        scope[markAccessor]--;
-    }
-  };
-}
-var accessorId = 0;
-function intersection(count, fn, getIntersection) {
-  let dirtyAccessor = "?" + accessorId++,
-    markAccessor = dirtyAccessor + "#",
-    intersection2 =
-      getIntersection &&
-      ((scope, op) => (intersection2 = getIntersection())(scope, op));
-  return (scope, op) => {
-    op === MARK
-      ? 1 === (scope[markAccessor] = (scope[markAccessor] ?? 0) + 1) &&
-        intersection2?.(scope, MARK)
-      : void 0 === scope[markAccessor]
-        ? ((scope[markAccessor] = count - 1), (scope[dirtyAccessor] = !0))
-        : 0 == --scope[markAccessor]
-          ? op === DIRTY || scope[dirtyAccessor]
-            ? ((scope[dirtyAccessor] = !1),
-              fn(scope, 0),
-              intersection2?.(scope, DIRTY))
-            : intersection2?.(scope, CLEAN)
-          : (scope[dirtyAccessor] ||= op === DIRTY);
-  };
-}
-var defaultGetOwnerScope = (scope) => scope._;
-function closure(
-  ownerValueAccessor,
-  fn,
-  getOwnerScope = defaultGetOwnerScope,
-  getIntersection,
-) {
-  let dirtyAccessor = "?" + accessorId++,
-    markAccessor = dirtyAccessor + 1,
-    getOwnerValueAccessor =
-      "function" == typeof ownerValueAccessor
-        ? ownerValueAccessor
-        : () => ownerValueAccessor,
-    intersection2 =
-      getIntersection &&
-      ((scope, op) => (intersection2 = getIntersection())(scope, op));
-  return (scope, op) => {
-    if (op === MARK)
-      1 === (scope[markAccessor] = (scope[markAccessor] ?? 0) + 1) &&
-        intersection2?.(scope, MARK);
-    else {
-      let ownerScope, ownerValueAccessor2;
-      if (void 0 === scope[markAccessor]) {
-        (ownerScope = getOwnerScope(scope)),
-          (ownerValueAccessor2 = getOwnerValueAccessor(scope));
-        let ownerMark = ownerScope[ownerValueAccessor2 + "#"],
-          ownerHasRun = void 0 === ownerMark ? !ownerScope.y : 0 === ownerMark;
-        (scope[markAccessor] = ownerHasRun ? 1 : 2), (op = DIRTY);
-      }
-      0 == --scope[markAccessor]
-        ? op === DIRTY || scope[dirtyAccessor]
-          ? ((scope[dirtyAccessor] = !1),
-            (ownerScope ||= getOwnerScope(scope)),
-            (ownerValueAccessor2 ||= getOwnerValueAccessor(scope)),
-            fn && fn(scope, ownerScope[ownerValueAccessor2]),
-            intersection2?.(scope, DIRTY))
-          : intersection2?.(scope, CLEAN)
-        : (scope[dirtyAccessor] ||= op === DIRTY);
-    }
-  };
-}
-function dynamicClosure(
-  ownerValueAccessor,
-  fn,
-  getOwnerScope = defaultGetOwnerScope,
-  getIntersection,
-) {
-  let getOwnerValueAccessor =
-      "function" == typeof ownerValueAccessor
-        ? ownerValueAccessor
-        : () => ownerValueAccessor,
-    signalFn = closure(
-      getOwnerValueAccessor,
-      fn,
-      getOwnerScope,
-      getIntersection,
-    ),
-    subscribeFns = new WeakMap();
-  return (
-    (signalFn.j = (scope) => {
-      let subscribeFn = (value2) => signalFn(scope, value2),
-        ownerScope = getOwnerScope(scope),
-        providerSubscriptionsAccessor = getOwnerValueAccessor(scope) + "*";
-      subscribeFns.set(scope, subscribeFn),
-        (ownerScope[providerSubscriptionsAccessor] ||= new Set()).add(
-          subscribeFn,
-        );
-    }),
-    (signalFn.l = (scope) => {
-      let ownerScope = getOwnerScope(scope),
-        providerSubscriptionsAccessor = getOwnerValueAccessor(scope) + "*";
-      ownerScope[providerSubscriptionsAccessor]?.delete(
-        subscribeFns.get(scope),
-      ),
-        subscribeFns.delete(scope);
-    }),
-    signalFn
-  );
-}
-function childClosures(closureSignals, childAccessor) {
-  let signal = (scope, op) => {
-    let childScope = scope[childAccessor];
-    for (let closureSignal of closureSignals) closureSignal(childScope, op);
-  };
-  return (
-    (signal.j = (scope) => {
-      let childScope = scope[childAccessor];
-      for (let closureSignal of closureSignals) closureSignal.j?.(childScope);
-    }),
-    (signal.l = (scope) => {
-      let childScope = scope[childAccessor];
-      for (let closureSignal of closureSignals) closureSignal.l?.(childScope);
-    }),
-    signal
-  );
-}
-function dynamicSubscribers(valueAccessor) {
-  let subscribersAccessor = valueAccessor + "*";
-  return (scope, op) => {
-    let subscribers = scope[subscribersAccessor];
-    if (subscribers) for (let subscriber of subscribers) subscriber(op);
-  };
-}
-function setTagVar(scope, childAccessor, tagVarSignal2) {
-  scope[childAccessor]["/"] = (valueOrOp) => tagVarSignal2(scope, valueOrOp);
-}
-var tagVarSignal = (scope, valueOrOp) => scope["/"]?.(valueOrOp);
-function setTagVarChange(scope, changeHandler) {
-  scope["@"] = changeHandler;
-}
-var tagVarSignalChange = (scope, value2) => scope["@"]?.(value2),
-  contentClosures = (content, childScope, op) => {
-    let signals = content?.c;
-    if (signals) for (let signal of signals) signal(childScope, op);
-  },
-  tagIdsByGlobal = new WeakMap();
-function nextTagId({ $global: $global }) {
-  let id = tagIdsByGlobal.get($global) || 0;
-  return (
-    tagIdsByGlobal.set($global, id + 1),
-    "c" + $global.runtimeId + $global.renderId + id.toString(36)
-  );
-}
-function inChild(childAccessor, signal) {
-  return (scope, valueOrOp) => {
-    signal(scope[childAccessor], valueOrOp);
-  };
-}
-function intersections(signals) {
-  return (scope, op) => {
-    for (let signal of signals) signal(scope, op);
-  };
-}
-function effect(id, fn) {
-  return (
-    register(id, fn),
-    (scope) => {
-      queueEffect(scope, fn);
-    }
-  );
-}
-var pendingSignal,
-  pendingEffects = [],
-  rendering = !1;
-function queueEffect(scope, fn) {
-  pendingEffects.push(scope, fn);
-}
-function run() {
-  let effects = pendingEffects;
-  try {
-    (rendering = !0), runSignals();
-  } finally {
-    (pendingSignal = void 0), (rendering = !1);
-  }
-  (pendingEffects = []), runEffects(effects);
-}
-function prepareEffects(fn) {
-  let prevSignals = pendingSignal,
-    prevEffects = pendingEffects,
-    preparedEffects = (pendingEffects = []);
-  try {
-    (rendering = !0), (pendingSignal = void 0), fn(), runSignals();
-  } finally {
-    (rendering = !1),
-      (pendingSignal = prevSignals),
-      (pendingEffects = prevEffects);
-  }
-  return preparedEffects;
-}
-function runEffects(effects = pendingEffects) {
-  for (let i = 0; i < effects.length; i += 2) {
-    let scope = effects[i];
-    (0, effects[i + 1])(scope, scope);
-  }
-}
-function runSignals() {
-  for (; pendingSignal; )
-    scopeIsConnected(pendingSignal.f) &&
-      pendingSignal.D(pendingSignal.f, pendingSignal.E),
-      (pendingSignal = pendingSignal.d);
-}
-function scopeIsConnected(scope) {
-  let start = ownerStartNode(scope);
-  return !start || start.isConnected;
-}
-function sortScopeByDOMPosition(a, b) {
-  let aStart = ownerStartNode(a),
-    bStart = ownerStartNode(b);
-  return aStart === bStart
-    ? 0
-    : aStart
-      ? bStart
-        ? 2 & aStart.compareDocumentPosition(bStart)
-          ? -1
-          : 1
-        : -1
-      : 1;
-}
-function ownerStartNode(scope) {
-  return (scope.e || scope).a;
-}
-function resetAbortSignal(scope, id) {
-  let controllers = scope.n;
-  if (controllers) {
-    let ctrl = controllers.get(id);
-    ctrl && (queueEffect(null, () => ctrl.abort()), controllers.delete(id));
-  }
-}
-function getAbortSignal(scope, id) {
-  let controllers = (scope.n ||= new Map()),
-    controller = controllers.get(id);
-  return (
-    controller ||
-      (onDestroy(scope),
-      controllers.set(id, (controller = new AbortController()))),
-    controller.signal
-  );
-}
 function stringifyClassObject(name, value2) {
   return value2 ? name : "";
 }
@@ -592,6 +91,44 @@ function getEventHandlerName(name) {
 function normalizeDynamicRenderer(value2) {
   if (value2) return value2.content || value2.default || value2;
 }
+function createScope($global) {
+  return { F: 1, $global: $global };
+}
+var emptyScope = createScope({});
+function getEmptyScope(marker) {
+  return (emptyScope.a = emptyScope.b = marker), emptyScope;
+}
+function destroyScope(scope) {
+  return _destroyScope(scope), scope.d?.h?.delete(scope), scope;
+}
+function _destroyScope(scope) {
+  scope.h?.forEach(_destroyScope);
+  let controllers = scope.l;
+  if (controllers) for (let ctrl of controllers.values()) ctrl.abort();
+}
+function onDestroy(scope) {
+  let parentScope = scope.d;
+  for (; parentScope && !parentScope.h?.has(scope); )
+    (parentScope.h ||= new Set()).add(scope),
+      (parentScope = (scope = parentScope).d);
+}
+function removeAndDestroyScope(scope) {
+  destroyScope(scope);
+  let current = scope.a,
+    stop = scope.b.nextSibling;
+  for (; current !== stop; ) {
+    let next = current.nextSibling;
+    current.remove(), (current = next);
+  }
+}
+function insertBefore(scope, parent, nextSibling) {
+  let current = scope.a,
+    stop = scope.b.nextSibling;
+  for (; current !== stop; ) {
+    let next = current.nextSibling;
+    parent.insertBefore(current, nextSibling), (current = next);
+  }
+}
 var elementHandlersByEvent = new Map(),
   defaultDelegator = createDelegator();
 function on(element, type, handler) {
@@ -624,6 +161,157 @@ function handleDelegated(ev) {
 }
 function stripSpacesAndPunctuation(str) {
   return str.replace(/[^\p{L}\p{N}]/gu, "");
+}
+var registeredValues = {},
+  Render = class {
+    m = [];
+    n = {};
+    t = { _: registeredValues };
+    constructor(renders, runtimeId, renderId) {
+      (this.u = renders),
+        (this.x = runtimeId),
+        (this.o = renderId),
+        (this.p = renders[renderId]),
+        this.q();
+    }
+    w() {
+      this.p.w(), this.q();
+    }
+    q() {
+      let data2 = this.p,
+        serializeContext = this.t,
+        scopeLookup = this.n,
+        visits = data2.v,
+        cleanupOwners = new Map();
+      if (visits.length) {
+        let commentPrefixLen = data2.i.length,
+          cleanupMarkers = new Map();
+        data2.v = [];
+        let sectionEnd = (visit, scopeId = this.g, curNode = visit) => {
+          let scope = (scopeLookup[scopeId] ||= {}),
+            endNode = curNode;
+          for (; 8 === (endNode = endNode.previousSibling).nodeType; );
+          scope.b = endNode;
+          let startNode = (scope.a ||= endNode),
+            len = cleanupMarkers.size;
+          for (let [markerScopeId, markerNode] of cleanupMarkers) {
+            if (!len--) break;
+            markerScopeId !== scopeId &&
+              4 & startNode.compareDocumentPosition(markerNode) &&
+              2 & curNode.compareDocumentPosition(markerNode) &&
+              (cleanupOwners.set("" + markerScopeId, scopeId),
+              cleanupMarkers.delete(markerScopeId));
+          }
+          return cleanupMarkers.set(scopeId, visit), scope;
+        };
+        for (let visit of visits) {
+          let commentText = visit.data,
+            token = commentText[commentPrefixLen],
+            scopeId = parseInt(commentText.slice(commentPrefixLen + 1)),
+            scope = (scopeLookup[scopeId] ||= {}),
+            dataIndex = commentText.indexOf(" ") + 1,
+            data3 = dataIndex ? commentText.slice(dataIndex) : "";
+          if ("*" === token) scope[data3] = visit.previousSibling;
+          else if ("$" === token) cleanupMarkers.set(scopeId, visit);
+          else if ("[" === token)
+            this.g && (data3 && sectionEnd(visit), this.m.push(this.g)),
+              (this.g = scopeId),
+              (scope.a = visit);
+          else if ("]" === token) {
+            if (((scope[data3] = visit), scopeId < this.g)) {
+              let currParent = visit.parentNode,
+                startNode = sectionEnd(visit).a;
+              currParent &&
+                currParent !== startNode.parentNode &&
+                currParent.prepend(startNode),
+                (this.g = this.m.pop());
+            }
+          } else if ("|" === token) {
+            scope[parseInt(data3)] = visit;
+            let childScopeIds = JSON.parse(
+                "[" + data3.slice(data3.indexOf(" ") + 1) + "]",
+              ),
+              curNode = visit;
+            for (let i = childScopeIds.length - 1; i >= 0; i--)
+              curNode = sectionEnd(visit, childScopeIds[i], curNode).b;
+          }
+        }
+      }
+      let resumes = data2.r;
+      if (resumes) {
+        data2.r = [];
+        let len = resumes.length,
+          i = 0;
+        try {
+          for (isResuming = !0; i < len; ) {
+            let resumeData = resumes[i++];
+            if ("function" == typeof resumeData) {
+              let scopes = resumeData(serializeContext),
+                { $global: $global } = scopeLookup;
+              $global ||
+                ((scopeLookup.$global = $global = scopes.$ || {}),
+                ($global.runtimeId = this.x),
+                ($global.renderId = this.o));
+              for (let scopeId in scopes)
+                if ("$" !== scopeId) {
+                  let scope = scopes[scopeId],
+                    prevScope = scopeLookup[scopeId];
+                  (scope.$global = $global),
+                    prevScope !== scope &&
+                      (scopeLookup[scopeId] = Object.assign(scope, prevScope));
+                  let cleanupOwnerId = cleanupOwners.get(scopeId);
+                  cleanupOwnerId &&
+                    ((scope.d = scopes[cleanupOwnerId]), onDestroy(scope));
+                }
+            } else
+              i === len || "string" != typeof resumes[i]
+                ? delete this.u[this.o]
+                : registeredValues[resumes[i++]](
+                    scopeLookup[resumeData],
+                    scopeLookup[resumeData],
+                  );
+          }
+        } finally {
+          isResuming = !1;
+        }
+      }
+    }
+  },
+  isResuming = !1;
+function register(id, obj) {
+  return (registeredValues[id] = obj), obj;
+}
+function registerBoundSignal(id, signal) {
+  return (
+    (registeredValues[id] = (scope) => (valueOrOp) => signal(scope, valueOrOp)),
+    signal
+  );
+}
+function init(runtimeId = "M") {
+  let renders,
+    resumeRender = (renderId) =>
+      (resumeRender[renderId] = renders[renderId] =
+        new Render(renders, runtimeId, renderId));
+  function setRenders(v) {
+    renders = v;
+    for (let renderId in v) resumeRender(renderId);
+    Object.defineProperty(window, runtimeId, {
+      configurable: !0,
+      value: resumeRender,
+    });
+  }
+  window[runtimeId]
+    ? setRenders(window[runtimeId])
+    : Object.defineProperty(window, runtimeId, {
+        configurable: !0,
+        set: setRenders,
+      });
+}
+function registerSubscriber(id, signal) {
+  return register(id, signal.y), signal;
+}
+function nodeRef(id, key) {
+  return register(id, (scope) => () => scope[key]);
 }
 function controllable_input_checked(
   scope,
@@ -1102,7 +790,7 @@ function walkInternal(walkCodes, scope, cleanupOwnerScope, currentWalkIndex) {
     currentMultiplier = 0,
     currentScopeIndex = 0;
   for (
-    cleanupOwnerScope !== scope && (scope.e = cleanupOwnerScope);
+    cleanupOwnerScope !== scope && (scope.d = cleanupOwnerScope);
     (value2 = walkCodes.charCodeAt(currentWalkIndex++));
 
   )
@@ -1144,14 +832,12 @@ function walkInternal(walkCodes, scope, cleanupOwnerScope, currentWalkIndex) {
 }
 function createScopeWithRenderer(renderer, $global, ownerScope) {
   let newScope = createScope($global);
-  if (
-    ((newScope._ = newScope.e = renderer.F || ownerScope),
-    (newScope.z = renderer),
+  return (
+    (newScope._ = newScope.d = renderer.z || ownerScope),
+    (newScope.G = renderer),
     initRenderer(renderer, newScope),
-    renderer.c)
-  )
-    for (let signal of renderer.c) signal.j?.(newScope);
-  return newScope;
+    newScope
+  );
 }
 function createScopeWithTagNameOrRenderer(
   tagNameOrRenderer,
@@ -1162,7 +848,7 @@ function createScopeWithTagNameOrRenderer(
     return createScopeWithRenderer(tagNameOrRenderer, $global, ownerScope);
   let newScope = createScope($global);
   return (
-    (newScope._ = newScope.e = ownerScope),
+    (newScope._ = newScope.d = ownerScope),
     (newScope[0] =
       newScope.a =
       newScope.b =
@@ -1171,12 +857,12 @@ function createScopeWithTagNameOrRenderer(
   );
 }
 function initRenderer(renderer, scope) {
-  let dom = renderer.m();
+  let dom = renderer.j();
   return (
-    walk(11 === dom.nodeType ? dom.firstChild : dom, renderer.G, scope),
+    walk(11 === dom.nodeType ? dom.firstChild : dom, renderer.A, scope),
     (scope.a = 11 === dom.nodeType ? dom.firstChild : dom),
     (scope.b = 11 === dom.nodeType ? dom.lastChild : dom),
-    renderer.u && renderer.u(scope),
+    renderer.s && queueSource(scope, renderer.s, void 0),
     dom
   );
 }
@@ -1186,14 +872,14 @@ function dynamicTagAttrs(nodeAccessor, getContent, inputIsArgs) {
     if (!renderer || attrsOrOp === DIRTY) return;
     let childScope = scope[nodeAccessor + "!"];
     if (attrsOrOp === MARK || attrsOrOp === CLEAN)
-      return renderer.g?.(childScope, attrsOrOp);
+      return renderer.e?.(childScope, attrsOrOp);
     let content = getContent?.(scope);
     if ("string" == typeof renderer)
       setConditionalRendererOnlyChild(childScope, 0, content),
         attrs(childScope, 0, attrsOrOp());
-    else if (renderer.g) {
+    else if (renderer.e) {
       let attributes = attrsOrOp();
-      renderer.g(
+      renderer.e(
         childScope,
         inputIsArgs
           ? attributes
@@ -1202,44 +888,28 @@ function dynamicTagAttrs(nodeAccessor, getContent, inputIsArgs) {
     }
   };
 }
-function createRendererWithOwner(
-  template,
-  rawWalks,
-  setup,
-  getClosureSignals,
-  getArgs,
-) {
+function createRendererWithOwner(template, rawWalks, setup, getArgs) {
   let args,
-    closureSignals,
     id = {},
     walks = rawWalks ? trimWalkString(rawWalks) : " ";
   return (owner) => ({
-    x: id,
-    H: template,
-    G: walks,
-    u: setup,
-    m: _clone,
-    F: owner,
-    I: void 0,
-    get g() {
+    k: id,
+    B: template,
+    A: walks,
+    s: setup,
+    j: _clone,
+    z: owner,
+    C: void 0,
+    get e() {
       return (args ||= getArgs?.());
-    },
-    get c() {
-      return (closureSignals ||= new Set(getClosureSignals?.()));
     },
   });
 }
-function createRenderer(template, walks, setup, getClosureSignals, getArgs) {
-  return createRendererWithOwner(
-    template,
-    walks,
-    setup,
-    getClosureSignals,
-    getArgs,
-  )();
+function createRenderer(template, walks, setup, getArgs) {
+  return createRendererWithOwner(template, walks, setup, getArgs)();
 }
 function _clone() {
-  return (this.I ||= (function (html2) {
+  return (this.C ||= (function (html2) {
     let content = parseHTML(html2);
     return content.firstChild
       ? content.firstChild === content.lastChild &&
@@ -1247,11 +917,10 @@ function _clone() {
         ? content.firstChild
         : content
       : fallback;
-  })(this.H)).cloneNode(!0);
+  })(this.B)).cloneNode(!0);
 }
 var conditional = function (nodeAccessor, fn, getIntersection) {
   let rendererAccessor = nodeAccessor + "(",
-    childScopeAccessor = nodeAccessor + "!",
     intersection2 =
       getIntersection &&
       ((scope, op) => (intersection2 = getIntersection())(scope, op));
@@ -1283,25 +952,11 @@ var conditional = function (nodeAccessor, fn, getIntersection) {
           (op = DIRTY))
         : (op = CLEAN);
     }
-    intersection2?.(scope, op),
-      contentClosures(currentRenderer, scope[childScopeAccessor], op);
+    intersection2?.(scope, op);
   };
 };
-function inConditionalScope(signal, nodeAccessor) {
-  let scopeAccessor = nodeAccessor + "!",
-    rendererAccessor = nodeAccessor + "(";
-  return (scope, op) => {
-    let conditionalScope = scope[scopeAccessor];
-    if (conditionalScope) {
-      let conditionalRenderer = scope[rendererAccessor];
-      (!conditionalRenderer?.c || conditionalRenderer.c.has(signal)) &&
-        signal(conditionalScope, op);
-    }
-  };
-}
 var conditionalOnlyChild = function (nodeAccessor, fn, getIntersection) {
   let rendererAccessor = nodeAccessor + "(",
-    childScopeAccessor = nodeAccessor + "!",
     intersection2 =
       getIntersection &&
       ((scope, op) => (intersection2 = getIntersection())(scope, op));
@@ -1322,8 +977,7 @@ var conditionalOnlyChild = function (nodeAccessor, fn, getIntersection) {
           (op = DIRTY))
         : (op = CLEAN);
     }
-    intersection2?.(scope, op),
-      contentClosures(currentRenderer, scope[childScopeAccessor], op);
+    intersection2?.(scope, op);
   };
 };
 function setConditionalRendererOnlyChild(scope, nodeAccessor, newRenderer) {
@@ -1368,18 +1022,14 @@ function loopTo(nodeAccessor, renderer) {
 }
 function loop(nodeAccessor, renderer, forEach) {
   let loopScopeAccessor = nodeAccessor + "!",
-    closureSignals = renderer.c,
-    params = renderer.g;
+    params = renderer.e;
   return (scope, valueOrOp) => {
     if (valueOrOp === DIRTY) return;
     if (valueOrOp === MARK || valueOrOp === CLEAN) {
       let loopScopes =
         scope[loopScopeAccessor] ?? scope[nodeAccessor + "("]?.values() ?? [];
       if (loopScopes !== emptyMarkerArray)
-        for (let childScope of loopScopes) {
-          params?.(childScope, valueOrOp);
-          for (let signal of closureSignals) signal(childScope, valueOrOp);
-        }
+        for (let childScope of loopScopes) params?.(childScope, valueOrOp);
       return;
     }
     let newMap,
@@ -1396,24 +1046,18 @@ function loop(nodeAccessor, renderer, forEach) {
       needsReconciliation = !0;
     if (
       (forEach(valueOrOp, (key, args) => {
-        let childScope = oldMap.get(key),
-          closureOp = CLEAN;
-        if (
-          (childScope ||
-            ((childScope = createScopeWithRenderer(
-              renderer,
-              scope.$global,
-              scope,
-            )),
-            (closureOp = DIRTY)),
+        let childScope = oldMap.get(key);
+        childScope ||
+          (childScope = createScopeWithRenderer(
+            renderer,
+            scope.$global,
+            scope,
+          )),
           params && params(childScope, args),
-          closureSignals)
-        )
-          for (let signal of closureSignals) signal(childScope, closureOp);
-        newMap
-          ? (newMap.set(key, childScope), newArray.push(childScope))
-          : ((newMap = new Map([[key, childScope]])),
-            (newArray = [childScope]));
+          newMap
+            ? (newMap.set(key, childScope), newArray.push(childScope))
+            : ((newMap = new Map([[key, childScope]])),
+              (newArray = [childScope]));
       }),
       newMap ||
         (referenceIsMarker
@@ -1555,15 +1199,6 @@ function loop(nodeAccessor, renderer, forEach) {
       (scope[nodeAccessor + "!"] = newArray);
   };
 }
-function inLoopScope(signal, loopNodeAccessor) {
-  let loopScopeAccessor = loopNodeAccessor + "!";
-  return (scope, op) => {
-    let loopScopes =
-      scope[loopScopeAccessor] ?? scope[loopNodeAccessor + "("]?.values() ?? [];
-    if (loopScopes !== emptyMarkerArray)
-      for (let scope2 of loopScopes) signal(scope2, op);
-  };
-}
 function bySecondArg(_item, index) {
   return index;
 }
@@ -1571,7 +1206,248 @@ function byFirstArg(name) {
   return name;
 }
 function isDifferentRenderer(a, b) {
-  return a !== b && (a?.x || 0) !== b?.x;
+  return a !== b && (a?.k || 0) !== b?.k;
+}
+var MARK = {},
+  CLEAN = {},
+  DIRTY = {};
+function state(valueAccessor, fn, getIntersection) {
+  let valueSignal = value(valueAccessor, fn, getIntersection),
+    markAccessor = valueAccessor + "#",
+    valueChangeAccessor = valueAccessor + "@";
+  return (scope, valueOrOp, valueChange) => (
+    rendering
+      ? valueSignal(
+          scope,
+          valueOrOp === MARK ||
+            valueOrOp === CLEAN ||
+            valueOrOp === DIRTY ||
+            (scope[valueChangeAccessor] = valueChange) ||
+            void 0 === scope[markAccessor]
+            ? valueOrOp
+            : CLEAN,
+        )
+      : scope[valueChangeAccessor]
+        ? scope[valueChangeAccessor](valueOrOp)
+        : queueSource(scope, valueSignal, valueOrOp),
+    valueOrOp
+  );
+}
+function value(valueAccessor, fn, getIntersection) {
+  let markAccessor = valueAccessor + "#",
+    intersection2 =
+      getIntersection &&
+      ((scope, op) => (intersection2 = getIntersection())(scope, op));
+  return (scope, valueOrOp) => {
+    if (valueOrOp === MARK)
+      1 === (scope[markAccessor] = (scope[markAccessor] ?? 0) + 1) &&
+        intersection2?.(scope, MARK);
+    else if (valueOrOp !== DIRTY) {
+      let existing = void 0 !== scope[markAccessor];
+      1 === (scope[markAccessor] ||= 1) &&
+        (valueOrOp === CLEAN || (existing && scope[valueAccessor] === valueOrOp)
+          ? intersection2?.(scope, CLEAN)
+          : ((scope[valueAccessor] = valueOrOp),
+            fn && fn(scope, valueOrOp),
+            intersection2?.(scope, DIRTY))),
+        scope[markAccessor]--;
+    }
+  };
+}
+var accessorId = 0;
+function intersection(count, fn, getIntersection) {
+  let dirtyAccessor = "?" + accessorId++,
+    markAccessor = dirtyAccessor + "#",
+    intersection2 =
+      getIntersection &&
+      ((scope, op) => (intersection2 = getIntersection())(scope, op));
+  return (scope, op) => {
+    op === MARK
+      ? 1 === (scope[markAccessor] = (scope[markAccessor] ?? 0) + 1) &&
+        intersection2?.(scope, MARK)
+      : void 0 === scope[markAccessor]
+        ? ((scope[markAccessor] = count - 1), (scope[dirtyAccessor] = !0))
+        : 0 == --scope[markAccessor]
+          ? op === DIRTY || scope[dirtyAccessor]
+            ? ((scope[dirtyAccessor] = !1),
+              fn(scope, 0),
+              intersection2?.(scope, DIRTY))
+            : intersection2?.(scope, CLEAN)
+          : (scope[dirtyAccessor] ||= op === DIRTY);
+  };
+}
+function closure(fn, getIntersection) {
+  let intersection2 =
+    getIntersection &&
+    ((scope, op) => (intersection2 = getIntersection())(scope, op));
+  return (scope, valueOrOp) => {
+    valueOrOp === MARK
+      ? intersection2?.(scope, MARK)
+      : (fn && fn(scope, valueOrOp), intersection2?.(scope, DIRTY));
+  };
+}
+var defaultGetOwnerScope = (scope) => scope._;
+function dynamicClosure(
+  ownerValueAccessor,
+  fn,
+  getOwnerScope = defaultGetOwnerScope,
+  getIntersection,
+) {
+  let ownerSubscribersAccessor = ownerValueAccessor + "*",
+    _signal = closure(fn, getIntersection),
+    helperSignal = (ownerScope, value2) => {
+      let subscribers = ownerScope[ownerSubscribersAccessor];
+      if (subscribers)
+        for (let subscriber of subscribers)
+          queueSource(subscriber, _signal, value2);
+    },
+    subscribe = (scope) => {
+      (getOwnerScope(scope)[ownerSubscribersAccessor] ||= new Set()).add(scope),
+        getAbortSignal(scope, -1).addEventListener("abort", () => {
+          getOwnerScope(scope)[ownerSubscribersAccessor].delete(scope);
+        });
+    };
+  return (
+    (helperSignal._ = (scope, value2) => {
+      _signal(scope, value2), subscribe(scope);
+    }),
+    (helperSignal.y = subscribe),
+    helperSignal
+  );
+}
+function setTagVar(scope, childAccessor, tagVarSignal2) {
+  scope[childAccessor]["/"] = (valueOrOp) => tagVarSignal2(scope, valueOrOp);
+}
+var tagVarSignal = (scope, valueOrOp) => scope["/"]?.(valueOrOp);
+function setTagVarChange(scope, changeHandler) {
+  scope["@"] = changeHandler;
+}
+var tagVarSignalChange = (scope, value2) => scope["@"]?.(value2),
+  tagIdsByGlobal = new WeakMap();
+function nextTagId({ $global: $global }) {
+  let id = tagIdsByGlobal.get($global) || 0;
+  return (
+    tagIdsByGlobal.set($global, id + 1),
+    "c" + $global.runtimeId + $global.renderId + id.toString(36)
+  );
+}
+function inChild(childAccessor, signal) {
+  return (scope, valueOrOp) => {
+    signal(scope[childAccessor], valueOrOp);
+  };
+}
+function intersections(signals) {
+  return (scope, op) => {
+    for (let signal of signals) signal(scope, op);
+  };
+}
+function effect(id, fn) {
+  return (
+    register(id, fn),
+    (scope) => {
+      queueEffect(scope, fn);
+    }
+  );
+}
+var pendingSignal,
+  pendingEffects = [],
+  rendering = !1;
+function queueSource(scope, signal, value2) {
+  isScheduled || ((isScheduled = !0), queueMicrotask(flushAndWaitFrame)),
+    (rendering = !0),
+    signal(scope, MARK),
+    (rendering = !1);
+  let nextSignal = { f: scope, D: signal, E: value2, c: void 0 };
+  if (pendingSignal)
+    if (sortScopeByDOMPosition(pendingSignal.f, nextSignal.f) < 0)
+      (nextSignal.c = pendingSignal), (pendingSignal = nextSignal);
+    else {
+      let currentSignal = pendingSignal;
+      for (
+        ;
+        currentSignal.c &&
+        sortScopeByDOMPosition(currentSignal.c.f, nextSignal.f) <= 0;
+
+      )
+        currentSignal = currentSignal.c;
+      (nextSignal.c = currentSignal.c), (currentSignal.c = nextSignal);
+    }
+  else pendingSignal = nextSignal;
+  return value2;
+}
+function queueEffect(scope, fn) {
+  pendingEffects.push(scope, fn);
+}
+function run() {
+  let effects = pendingEffects;
+  try {
+    (rendering = !0), runSignals();
+  } finally {
+    (pendingSignal = void 0), (rendering = !1);
+  }
+  (pendingEffects = []), runEffects(effects);
+}
+function prepareEffects(fn) {
+  let prevSignals = pendingSignal,
+    prevEffects = pendingEffects,
+    preparedEffects = (pendingEffects = []);
+  try {
+    (rendering = !0), (pendingSignal = void 0), fn(), runSignals();
+  } finally {
+    (rendering = !1),
+      (pendingSignal = prevSignals),
+      (pendingEffects = prevEffects);
+  }
+  return preparedEffects;
+}
+function runEffects(effects = pendingEffects) {
+  for (let i = 0; i < effects.length; i += 2) {
+    let scope = effects[i];
+    (0, effects[i + 1])(scope, scope);
+  }
+}
+function runSignals() {
+  for (; pendingSignal; )
+    scopeIsConnected(pendingSignal.f) &&
+      pendingSignal.D(pendingSignal.f, pendingSignal.E),
+      (pendingSignal = pendingSignal.c);
+}
+function scopeIsConnected(scope) {
+  let start = ownerStartNode(scope);
+  return !start || start.isConnected;
+}
+function sortScopeByDOMPosition(a, b) {
+  let aStart = ownerStartNode(a),
+    bStart = ownerStartNode(b);
+  return aStart === bStart
+    ? 0
+    : aStart
+      ? bStart
+        ? 2 & aStart.compareDocumentPosition(bStart)
+          ? -1
+          : 1
+        : -1
+      : 1;
+}
+function ownerStartNode(scope) {
+  return (scope.d || scope).a;
+}
+function resetAbortSignal(scope, id) {
+  let controllers = scope.l;
+  if (controllers) {
+    let ctrl = controllers.get(id);
+    ctrl && (queueEffect(null, () => ctrl.abort()), controllers.delete(id));
+  }
+}
+function getAbortSignal(scope, id) {
+  let controllers = (scope.l ||= new Map()),
+    controller = controllers.get(id);
+  return (
+    controller ||
+      (onDestroy(scope),
+      controllers.set(id, (controller = new AbortController()))),
+    controller.signal
+  );
 }
 var classIdToScope = new Map(),
   compat = {
@@ -1589,7 +1465,7 @@ var classIdToScope = new Map(),
       register("$C_r", fn);
     },
     isOp: (value2) => value2 === MARK || value2 === CLEAN || value2 === DIRTY,
-    isRenderer: (renderer) => void 0 !== renderer.m,
+    isRenderer: (renderer) => void 0 !== renderer.j,
     getStartNode: (scope) => scope.a,
     setScopeNodes(scope, startNode, endNode) {
       (scope.a = startNode), (scope.b = endNode);
@@ -1610,18 +1486,12 @@ var classIdToScope = new Map(),
             2 === value2.length &&
               window[runtimeId]?.[
                 "s" === componentIdPrefix ? "_" : componentIdPrefix
-              ]?.p[value2[1]],
+              ]?.n[value2[1]],
           )
         : value2,
     createRenderer(setup, clone, args) {
-      let renderer = createRenderer(
-        "",
-        void 0,
-        setup,
-        void 0,
-        args && (() => args),
-      );
-      return (renderer.m = clone), renderer;
+      let renderer = createRenderer("", void 0, setup, args && (() => args));
+      return (renderer.j = clone), renderer;
     },
     render(out, component, renderer, args) {
       let scope = component.scope;
@@ -1629,7 +1499,7 @@ var classIdToScope = new Map(),
         ((scope = classIdToScope.get(component.id)),
         scope &&
           ((component.scope = scope), classIdToScope.delete(component.id)));
-      let applyArgs = renderer.g || noop,
+      let applyArgs = renderer.e || noop,
         existing = !1;
       if ("object" == typeof args[0] && "renderBody" in args[0]) {
         let input = args[0],
@@ -1639,17 +1509,11 @@ var classIdToScope = new Map(),
       }
       if (
         ((component.effects = prepareEffects(() => {
-          if (scope) applyArgs(scope, MARK), (existing = !0);
-          else {
-            scope = component.scope = createScopeWithRenderer(
-              renderer,
-              out.global,
-            );
-            let closures = renderer.c;
-            if (closures)
-              for (let signal of closures) signal(component.scope, CLEAN);
-          }
-          applyArgs(scope, args);
+          scope
+            ? (applyArgs(scope, MARK), (existing = !0))
+            : (scope = component.scope =
+                createScopeWithRenderer(renderer, out.global)),
+            applyArgs(scope, args);
         })),
         !existing)
       )
@@ -1673,7 +1537,7 @@ function mount(input = {}, reference, position) {
     ? (({ $global: $global, ...input } = input),
       ($global = { runtimeId: "M", renderId: "_", ...$global }))
     : ($global = { runtimeId: "M", renderId: "_" });
-  let args = this.g,
+  let args = this.e,
     effects = prepareEffects(() => {
       (scope = createScope($global)),
         (dom = initRenderer(this, scope)),

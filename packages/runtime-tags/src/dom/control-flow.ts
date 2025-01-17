@@ -13,15 +13,7 @@ import {
   insertBefore,
   removeAndDestroyScope,
 } from "./scope";
-import {
-  CLEAN,
-  contentClosures,
-  DIRTY,
-  type IntersectionSignal,
-  MARK,
-  type SignalOp,
-  type ValueSignal,
-} from "./signals";
+import { CLEAN, DIRTY, MARK, type Signal, type SignalOp } from "./signals";
 
 export function patchConditionals(
   fn: <T extends typeof conditional | typeof conditionalOnlyChild>(
@@ -35,11 +27,10 @@ export function patchConditionals(
 export let conditional = function conditional(
   nodeAccessor: Accessor,
   fn?: ((scope: Scope) => void) | 0,
-  getIntersection?: () => IntersectionSignal,
-): ValueSignal<Renderer | string | undefined> {
+  getIntersection?: () => Signal<never>,
+): Signal<Renderer | string | undefined> {
   const rendererAccessor = nodeAccessor + AccessorChar.ConditionalRenderer;
-  const childScopeAccessor = nodeAccessor + AccessorChar.ConditionalScope;
-  let intersection: IntersectionSignal | undefined =
+  let intersection: Signal<never> | undefined =
     getIntersection &&
     ((scope, op) => (intersection = getIntersection!())(scope, op));
 
@@ -65,30 +56,8 @@ export let conditional = function conditional(
       }
     }
     intersection?.(scope, op);
-    contentClosures(currentRenderer, scope[childScopeAccessor], op);
   };
 };
-
-// TODO: remove this, use return from conditional instead
-export function inConditionalScope<S extends Scope>(
-  signal: IntersectionSignal,
-  nodeAccessor: Accessor /* branch?: Renderer */,
-): IntersectionSignal {
-  const scopeAccessor = nodeAccessor + AccessorChar.ConditionalScope;
-  const rendererAccessor = nodeAccessor + AccessorChar.ConditionalRenderer;
-  return (scope: Scope, op: SignalOp) => {
-    const conditionalScope = scope[scopeAccessor] as S;
-    if (conditionalScope) {
-      const conditionalRenderer = scope[rendererAccessor] as Renderer;
-      if (
-        !conditionalRenderer?.___closureSignals ||
-        conditionalRenderer.___closureSignals.has(signal)
-      ) {
-        signal(conditionalScope, op);
-      }
-    }
-  };
-}
 
 export function setConditionalRenderer<ChildScope extends Scope>(
   scope: Scope,
@@ -124,11 +93,10 @@ export function setConditionalRenderer<ChildScope extends Scope>(
 export let conditionalOnlyChild = function conditional(
   nodeAccessor: Accessor,
   fn?: ((scope: Scope) => void) | 0,
-  getIntersection?: () => IntersectionSignal,
-): ValueSignal<Renderer | string | undefined> {
+  getIntersection?: () => Signal<never>,
+): Signal<Renderer | string | undefined> {
   const rendererAccessor = nodeAccessor + AccessorChar.ConditionalRenderer;
-  const childScopeAccessor = nodeAccessor + AccessorChar.ConditionalScope;
-  let intersection: IntersectionSignal | undefined =
+  let intersection: Signal<never> | undefined =
     getIntersection &&
     ((scope, op) => (intersection = getIntersection!())(scope, op));
 
@@ -158,7 +126,6 @@ export let conditionalOnlyChild = function conditional(
       }
     }
     intersection?.(scope, op);
-    contentClosures(currentRenderer, scope[childScopeAccessor], op);
   };
 };
 
@@ -228,7 +195,6 @@ function loop<T extends unknown[] = unknown[]>(
   forEach: (value: T, cb: (key: unknown, args: unknown[]) => void) => void,
 ) {
   const loopScopeAccessor = nodeAccessor + AccessorChar.LoopScopeArray;
-  const closureSignals = renderer.___closureSignals;
   const params = renderer.___args;
   return (scope: Scope, valueOrOp: T | SignalOp) => {
     if (valueOrOp === DIRTY) return;
@@ -240,9 +206,6 @@ function loop<T extends unknown[] = unknown[]>(
       if (loopScopes !== emptyMarkerArray) {
         for (const childScope of loopScopes) {
           params?.(childScope, valueOrOp);
-          for (const signal of closureSignals) {
-            signal(childScope, valueOrOp);
-          }
         }
       }
 
@@ -271,10 +234,8 @@ function loop<T extends unknown[] = unknown[]>(
 
     forEach(valueOrOp, (key, args) => {
       let childScope = oldMap.get(key);
-      let closureOp: SignalOp = CLEAN;
       if (!childScope) {
         childScope = createScopeWithRenderer(renderer, scope.$global, scope);
-        closureOp = DIRTY;
         // TODO: once we can track moves
         // needsReconciliation = true;
       } else {
@@ -283,11 +244,6 @@ function loop<T extends unknown[] = unknown[]>(
       }
       if (params) {
         params(childScope, args);
-      }
-      if (closureSignals) {
-        for (const signal of closureSignals) {
-          signal(childScope, closureOp);
-        }
       }
 
       if (newMap) {
@@ -331,25 +287,6 @@ function loop<T extends unknown[] = unknown[]>(
 
     scope[nodeAccessor + AccessorChar.LoopScopeMap] = newMap;
     scope[nodeAccessor + AccessorChar.LoopScopeArray] = newArray;
-  };
-}
-
-// TODO: remove this, use return from loop instead
-export function inLoopScope(
-  signal: IntersectionSignal,
-  loopNodeAccessor: Accessor,
-) {
-  const loopScopeAccessor = loopNodeAccessor + AccessorChar.LoopScopeArray;
-  return (scope: Scope, op: SignalOp) => {
-    const loopScopes =
-      scope[loopScopeAccessor] ??
-      scope[loopNodeAccessor + AccessorChar.LoopScopeMap]?.values() ??
-      [];
-    if (loopScopes !== emptyMarkerArray) {
-      for (const scope of loopScopes) {
-        signal(scope, op);
-      }
-    }
   };
 }
 

@@ -25,12 +25,6 @@ export function destroyScope(scope: Scope) {
 
   scope.___cleanupOwner?.___cleanup?.delete(scope);
 
-  const closureSignals = scope.___renderer?.___closureSignals;
-  if (closureSignals) {
-    for (const signal of closureSignals) {
-      signal.___unsubscribe?.(scope);
-    }
-  }
   return scope;
 }
 
