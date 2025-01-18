@@ -1,4 +1,4 @@
-# Render {}
+# Render
 ```html
 <button>
   Push
@@ -24,13 +24,13 @@
 
 # Mutations
 ```
-inserted button0, #comment1, div2, div3, #comment4, #comment5, div6, div7, #comment8, #comment9
+INSERT button, #comment0, div0, div1, #comment1, #comment2, div2, div3, #comment3, #comment4
 ```
 
-
-# Render 
-container.querySelector("button").click()
-
+# Render
+```js
+container.querySelector("button").click();
+```
 ```html
 <button>
   Push
@@ -73,13 +73,13 @@ container.querySelector("button").click()
 
 # Mutations
 ```
-inserted #comment11
-inserted #text
-inserted #comment15
-inserted div4
-inserted div9
-inserted div12
-inserted div13
-inserted div14
-removed #text after #comment11
+INSERT #comment4
+INSERT #text
+INSERT #comment5
+INSERT div2
+INSERT div5
+INSERT div6
+INSERT div7
+INSERT div8
+REMOVE #text after #comment4
 ```

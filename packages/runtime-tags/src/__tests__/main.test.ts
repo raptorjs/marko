@@ -3,7 +3,6 @@ import register from "@marko/compiler/register";
 import type { Input, Template } from "@marko/runtime-tags/common/types";
 import assert from "assert";
 import fs from "fs";
-import type { DOMWindow } from "jsdom";
 import snap from "mocha-snap";
 import path from "path";
 import glob from "tiny-glob";
@@ -237,17 +236,21 @@ describe("runtime-tags/translator", () => {
 
         try {
           for await (const data of serverTemplate.render(input)) {
+            const formattedHtml = indent(stripInlineRuntime(data));
+            if (formattedHtml) {
+              tracker.log(`# Write\n\`\`\`html\n${formattedHtml}\n\`\`\``);
+            }
+
             buffer += data;
-            tracker.log(`# Write\n${indent(stripInlineRuntime(data))}`);
           }
           document.write(buffer);
           document.close();
-          tracker.logUpdate("End");
+          tracker.logUpdate("End", true);
         } catch (error) {
-          tracker.log(`# Emit error\n${indent(error)}`);
+          tracker.log(`# Emit error\n\`\`\`\n${indent(error)}\n\`\`\``);
           document.write(buffer);
           document.close();
-          tracker.logUpdate("Error");
+          tracker.logUpdate("Error", true);
         }
 
         tracker.cleanup();
@@ -280,8 +283,6 @@ describe("runtime-tags/translator", () => {
 
         const { window } = browser;
         const { document } = window;
-        const throwErrors = trackErrors(window);
-
         const [input, ...steps] = (
           typeof config.steps === "function"
             ? await config.steps()
@@ -293,15 +294,12 @@ describe("runtime-tags/translator", () => {
         const template = browser.require<{ default: Template }>(
           manualCSR ? browserFile : templateFile,
         ).default;
-        const container = Object.assign(document.createElement("div"), {
-          TEST_ROOT: true,
-        });
+        const container = document.createElement("div");
         const tracker = createMutationTracker(browser.window, container);
 
         document.body.appendChild(container);
 
         const instance = template.mount(input, container, "afterbegin");
-        throwErrors();
         tracker.logUpdate(input);
 
         for (const update of steps) {
@@ -315,8 +313,7 @@ describe("runtime-tags/translator", () => {
                 run();
                 throw new Error("Expected error to be thrown");
               } catch (err) {
-                tracker.logUpdate(update, err as Error);
-                throwErrors();
+                tracker.logError(update, err as Error);
                 break;
               }
             } else {
@@ -327,8 +324,6 @@ describe("runtime-tags/translator", () => {
             instance.update(update);
             tracker.logUpdate(update);
           }
-
-          throwErrors();
         }
 
         tracker.cleanup();
@@ -343,7 +338,6 @@ describe("runtime-tags/translator", () => {
         const { browser } = await ssr();
         const { window } = browser;
         const { document } = window;
-        const throwErrors = trackErrors(window);
         const tracker = createMutationTracker(window, document);
         const [input, ...steps] =
           typeof config.steps === "function"
@@ -359,7 +353,6 @@ describe("runtime-tags/translator", () => {
 
         browser.require(manualResume ? resumeFile : templateFile);
         init();
-        throwErrors();
         tracker.logUpdate(input);
 
         for (const update of steps) {
@@ -375,8 +368,6 @@ describe("runtime-tags/translator", () => {
             // this will be covered by the client tests
             break;
           }
-
-          throwErrors();
         }
 
         tracker.cleanup();
@@ -453,29 +444,4 @@ function indent(data: unknown) {
     .split("\n")
     .map((line) => `  ${line}`)
     .join("\n");
-}
-
-function trackErrors(window: DOMWindow) {
-  const errors: Set<Error> = new Set();
-  const throwErrors = () => {
-    switch (errors.size) {
-      case 0:
-        return;
-      case 1:
-        throw [...errors][0];
-      default:
-        throw new AggregateError(errors);
-    }
-  };
-
-  window.addEventListener("error", (ev) => {
-    errors.add(ev.error.detail || ev.error);
-    ev.preventDefault();
-  });
-  window.addEventListener("unhandledrejection", (ev) => {
-    errors.add(ev.reason.detail || ev.reason);
-    ev.preventDefault();
-  });
-
-  return throwErrors;
 }
